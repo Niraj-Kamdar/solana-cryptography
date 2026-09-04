@@ -17,8 +17,7 @@ Exports:
 * G: the ed25519 generator point
 """
 
-
-from typing import Any, cast
+from typing import Any, Union, cast
 
 
 class FE:
@@ -31,7 +30,7 @@ class FE:
     SIZE = 2**255 - 19
     SQRT_M1 = pow(2, (SIZE - 1) // 4, SIZE)
 
-    def __init__(self, a=0, b=1):
+    def __init__(self, a: Union["FE", int] = 0, b: Union["FE", int] = 1):
         """Initialize a field element a/b; both a and b can be ints or field elements."""
         if isinstance(a, FE):
             num = a._num
@@ -105,7 +104,7 @@ class FE:
         s = pow(v, (FE.SIZE + 3) // 8, FE.SIZE)
         if s**2 % FE.SIZE == v:
             return FE(s)
-        if s ** 2 % FE.SIZE == (-v) % FE.SIZE:
+        if s**2 % FE.SIZE == (-v) % FE.SIZE:
             return FE(s * FE.SQRT_M1 % FE.SIZE)
         return None
 
@@ -126,12 +125,12 @@ class FE:
 
     def to_bytes(self):
         """Convert a field element to a 32-byte array (LE byte order)."""
-        return int(self).to_bytes(32, 'little')
+        return int(self).to_bytes(32, "little")
 
     @staticmethod
     def from_bytes(b):
         """Convert a 32-byte array to a field element (LE byte order, no overflow allowed)."""
-        v = int.from_bytes(b, 'little')
+        v = int.from_bytes(b, "little")
         if v >= FE.SIZE:
             return None
         return FE(v)
@@ -157,7 +156,7 @@ class GE:
     """
 
     # Order of the group (number of points on the curve, plus 1 for infinity)
-    ORDER = 2 ** 252 + 27742317777372353535851937790883648493
+    ORDER = 2**252 + 27742317777372353535851937790883648493
     COFACTOR = 8
     D = FE(-121665, 121666)
 
@@ -166,7 +165,7 @@ class GE:
         # Initialize as point on the curve (and check that it is).
         fx = FE(x)
         fy = FE(y)
-        assert -fx ** 2 + fy ** 2 == 1 + GE.D * fx ** 2 * fy ** 2
+        assert -(fx**2) + fy**2 == 1 + GE.D * fx**2 * fy**2
         self.x = fx
         self.y = fy
 
@@ -177,7 +176,7 @@ class GE:
         A = self.x * a.y + self.y * a.x
         B = self.y * a.y + self.x * a.x
         C = GE.D * self.x * self.y * a.x * a.y
-        return GE(A / (1 + C), B / ( 1 - C))
+        return GE(A / (1 + C), B / (1 - C))
 
     def __neg__(self):
         return GE(-self.x, self.y)
@@ -193,11 +192,11 @@ class GE:
         # Start with identity (0, 1)
         r = GE()
         # Iterate over all bit positions, from high to low.
-        for i in range(252, -1, -1): # ℓ is 253 bits
+        for i in range(252, -1, -1):  # ℓ is 253 bits
             # Double what we have so far.
             r = r + r
             # Add then add the points for which the corresponding scalar bit is set.
-            for (a, p) in naps:
+            for a, p in naps:
                 if (a >> i) & 1:
                     r += p
         return r
@@ -222,24 +221,24 @@ class GE:
     def from_bytes(b):
         assert len(b) == 32
         sign = b[31] >> 7
-        b = bytes(b[:31]) + bytes([b[31] & 0x7f])     # clear bit 255
+        b = bytes(b[:31]) + bytes([b[31] & 0x7F])  # clear bit 255
         y = FE.from_bytes(b)
         if y is None:
-            return None                      # y >= p, non-canonical
+            return None  # y >= p, non-canonical
         P = GE.lift_y(y)
         if P is None:
-            return None                      # x² is not a square
+            return None  # x² is not a square
         if sign != (int(P.x) & 1):
             P = -P
         if int(P.x) == 0 and sign == 1:
-            return None    # ← the extra rule
+            return None  # ← the extra rule
         return P
 
     @staticmethod
     def lift_y(y):
         """Return group element with specified field element as x coordinate (and even y)."""
         fy = FE(y)
-        x = ((fy**2 - 1) / (GE.D * fy**2 + 1)).sqrt() # edcurve equation solve for x
+        x = ((fy**2 - 1) / (GE.D * fy**2 + 1)).sqrt()  # edcurve equation solve for x
         if x is None:
             return None
         if not x.is_even():
@@ -254,8 +253,9 @@ class GE:
         """Get a string representation for this group element."""
         return f"GE(0x{int(self.x):x},0x{int(self.y):x})"
 
+
 # The ed25519 generator point
-B = GE.lift_y(FE(4, 5))
+B = cast(GE, GE.lift_y(FE(4, 5)))
 
 
 class FastGEMul:
@@ -284,6 +284,7 @@ class FastGEMul:
                 result += self.table[bit]
         return result
 
+
 # Precomputed table with multiples of G for fast multiplication
 FAST_G = FastGEMul(B)
 
@@ -292,8 +293,11 @@ if __name__ == "__main__":
     # 2^255 - 19 % 8 === -19 % 8 === 5
     assert FE.SIZE % 8 == 5
     # Fermat: 2^(p-1) === 1
-    assert FE(FE.SQRT_M1)**2 == FE(-1)
+    assert FE(FE.SQRT_M1) ** 2 == FE(-1)
     assert FE(2).is_square() is False
-    assert cast(FE, FE(4).sqrt())**2 == FE(4)
+    assert cast(FE, FE(4).sqrt()) ** 2 == FE(4)
     assert FE(-1).sqrt() is not None
-    assert FE(-121665, 121666) == 37095705934669439343138083508754565189542113879843219016388785533085940283555
+    assert (
+        FE(-121665, 121666)
+        == 37095705934669439343138083508754565189542113879843219016388785533085940283555
+    )

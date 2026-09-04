@@ -1,6 +1,3 @@
-BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
-
-
 def generic_decode(alphabet: str, string: str) -> bytes:
     order = 0
     length = len(alphabet)
@@ -17,7 +14,7 @@ def generic_decode(alphabet: str, string: str) -> bytes:
 def generic_encode(alphabet: str, data: bytes) -> str:
     length = len(alphabet)
     val = int.from_bytes(data, "big")
-    pad = len(data)
+    pad = len(data)  - len(data.lstrip(b"\x00"))
 
     chars = []
     while val:
@@ -25,11 +22,3 @@ def generic_encode(alphabet: str, data: bytes) -> str:
         char = alphabet[remainder]
         chars.append(char)
     return alphabet[0] * pad + "".join(reversed(chars))
-
-
-def base58_encode(data: bytes) -> str:
-    return generic_encode(BASE58_ALPHABET, data)
-
-
-def base58_decode(string: str) -> bytes:
-    return generic_decode(BASE58_ALPHABET, string)

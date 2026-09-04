@@ -5,19 +5,10 @@ Reference: https://solana.com/docs/core/transactions/transaction-structure
 from dataclasses import dataclass
 from typing import List, TypedDict
 
-from codec import base58_decode
-
-
-def compact_u16(val: int) -> bytes:
-    if val < 0:
-        raise ValueError("Value Cannot be Negative")
-    if val < 0x80:
-        return bytes([val])
-    elif val < 0x4000:
-        return bytes([val & 0x7F | 0x80, val >> 7])
-    elif val < 0x10000:
-        return bytes([val & 0x7F | 0x80, (val >> 7) & 0x7F | 0x80, val >> 14])
-    raise ValueError(val)
+from .crypto.public_key import PublicKey
+from .encodings.block_hash import BlockHash
+from .encodings.base58 import base58_decode
+from .encodings.compact_u16 import compact_u16
 
 
 class MessageHeaderDict(TypedDict):
@@ -37,58 +28,6 @@ class MessageDict(TypedDict):
     accountKeys: List[str]  # base58
     recentBlockhash: str  # base58
     instructions: List[CompiledInstructionDict]
-
-
-class PubKey:
-    val: bytes
-
-    def __init__(self, val: bytes) -> None:
-        if len(val) != 32:
-            raise ValueError("Invalid Length for a public key")
-        self.val = val
-
-    @classmethod
-    def from_str(cls, val: str) -> "PubKey":
-        return cls(base58_decode(val))
-
-    def serialize(self) -> bytes:
-        return self.val
-
-    def __repr__(self) -> str:
-        return f"PubKey({self.val.hex()})"
-
-    def __eq__(self, other: object) -> bool:
-        return (
-            hasattr(other, "val")
-            and isinstance(getattr(other, "val"), bytes)
-            and self.val == getattr(other, "val")
-        )
-
-
-class Hash:
-    val: bytes
-
-    def __init__(self, val: bytes) -> None:
-        if len(val) != 32:
-            raise ValueError("Invalid length for a hash")
-        self.val = val
-
-    @classmethod
-    def from_str(cls, val: str) -> "Hash":
-        return cls(base58_decode(val))
-
-    def serialize(self) -> bytes:
-        return self.val
-
-    def __repr__(self) -> str:
-        return f"Hash({self.val.hex()})"
-
-    def __eq__(self, other: object) -> bool:
-        return (
-            hasattr(other, "val")
-            and isinstance(getattr(other, "val"), bytes)
-            and self.val == getattr(other, "val")
-        )
 
 
 @dataclass
@@ -135,8 +74,8 @@ class MessageHeader:
 @dataclass
 class Message:
     header: MessageHeader
-    account_keys: List[PubKey]
-    recent_blockhash: Hash
+    account_keys: List[PublicKey]
+    recent_blockhash: BlockHash
     instructions: List[CompiledInstruction]
 
     def serialize_account_keys(self):
@@ -168,7 +107,7 @@ class Message:
             num_readonly_unsigned_accounts=raw_header["numReadonlyUnsignedAccounts"],
         )
 
-        account_keys = [PubKey.from_str(key) for key in data["accountKeys"]]
+        account_keys = [PublicKey.from_str(key) for key in data["accountKeys"]]
 
         num_signed = header.num_required_signatures
         num_readonly_unsigned = header.num_readonly_unsigned_accounts
@@ -196,7 +135,7 @@ class Message:
         return cls(
             header=header,
             account_keys=account_keys,
-            recent_blockhash=Hash.from_str(data["recentBlockhash"]),
+            recent_blockhash=BlockHash.from_str(data["recentBlockhash"]),
             instructions=instructions,
         )
 
