@@ -26,7 +26,7 @@ from .public_key import PublicKey
 
 def verify_signature(sig: bytes, msg: bytes, public_key: PublicKey):
     sig_arr = bytearray(sig)
-    if len(sig_arr) != 64 and len(public_key.val) != 32:
+    if len(sig_arr) != 64 or len(public_key.val) != 32:
         return False
     first = sig_arr[:32]
     second = sig_arr[32:]
