@@ -1,0 +1,9 @@
+[project]
+name = "solana-cryptography"
+version = "0.1.0"
+description = "Solana cryptography in pure python"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.34.2",
+]

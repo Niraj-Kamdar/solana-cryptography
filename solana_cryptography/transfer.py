@@ -79,7 +79,7 @@ def construct_transfer_transaction(
 
 
 if __name__ == "__main__":
-    from rpc import getLatestBlockhash, simulateTransaction
+    from .rpc import getLatestBlockhash, simulateTransaction
 
     # Use default solana keygen keypair
     from_keypair_path = Path.home() / ".config" / "solana" / "id.json"
