@@ -3,7 +3,7 @@ Reference: https://solana.com/docs/core/transactions/transaction-structure
 """
 
 from dataclasses import dataclass
-from typing import List, TypedDict, cast
+from typing import List, TypedDict
 
 from codec import base58_decode
 
